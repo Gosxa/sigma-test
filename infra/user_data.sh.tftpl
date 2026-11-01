@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euxo pipefail
+exec > >(tee -a /var/log/user-data.log) 2>&1
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y ca-certificates curl unzip openssl
+
+# Docker Engine + Compose plugin from the official apt repo
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+usermod -aG docker ubuntu
+
+# AWS CLI v2
+curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install
+
+# Application
+mkdir -p /opt/wordpress
+cd /opt/wordpress
+
+cat > docker-compose.yml <<'COMPOSE_EOF'
+${compose_file}
+COMPOSE_EOF
+
+if [ ! -f .env ]; then
+  umask 077
+  cat > .env <<EOF
+MYSQL_ROOT_PASSWORD=$(openssl rand -hex 16)
+MYSQL_PASSWORD=$(openssl rand -hex 16)
+EOF
+fi
+
+docker compose up -d
