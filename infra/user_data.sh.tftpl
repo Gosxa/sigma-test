@@ -31,6 +31,11 @@ cat > docker-compose.yml <<'COMPOSE_EOF'
 ${compose_file}
 COMPOSE_EOF
 
+mkdir -p nginx
+cat > nginx/default.conf <<'NGINX_EOF'
+${nginx_conf}
+NGINX_EOF
+
 if [ ! -f .env ]; then
   umask 077
   cat > .env <<EOF

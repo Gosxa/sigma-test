@@ -16,5 +16,6 @@ module "ec2" {
 
   user_data = templatefile("${path.module}/user_data.sh.tftpl", {
     compose_file = file("${path.module}/app/docker-compose.yml")
+    nginx_conf   = file("${path.module}/app/nginx/default.conf")
   })
 }
